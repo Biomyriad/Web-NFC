@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+</head>
+
+<style>
+  body {
+    color: white;
+    background-color: black;
+  }
+
+  #scanButton {
+    color: white;
+    display: block;
+    height: 100px;
+    width: 100px;
+    margin-bottom: 20px;
+    margin-left: 350px;
+    background-color: #0F9E47;
+    font-weight: bolder;
+    font-size: 20pt;
+  }
+
+  #outputLog {
+    color: white;
+    display: block;
+    height: 800px;
+    width: 800px;
+    background-color: #323447;
+
+  }
+</style>
+
+<body>
+  <div>
+    <button id="scanButton">SCAN</button>
+    <textarea id="outputLog"></textarea>
+  </div>
+
+  <script>
+    //https://googlechrome.github.io/samples/web-nfc/
+    //var abortController = new AbortController();
+    //reader.scan({signal: abortController.signal});
+    //abortController.abort();    
+    
+ 
+    const supported = 'NDEFReader' in window;
+    if(!supported) {
+      scanButton.disabled = true
+      scanButton.style.color = "grey"
+      outputLog.style.color = "red"
+      outputLog.innerHTML = "NFC not supported OR permission not given!\n"
+    }
+    
+    var isStarted = false
+    var abortController = null
+
+    scanButton.addEventListener("click", async () => {
+      if (isStarted) {
+        stopScanning()
+        console.log("> Scan STOPPED");
+        outputLog.innerHTML += "\n> Scan STOPPED\n"
+        return
+      }
+      isStarted = true
+      scanButton.style.backgroundColor = "red"
+      scanButton.innerHTML = "STOP"
+      
+      console.log("User clicked scan button");
+      outputLog.innerHTML = "User clicked scan button\n"
+
+      try {
+        const ndef = new NDEFReader();
+        abortController = new AbortController();
+        await ndef.scan({signal: abortController.signal});
+        
+        console.log("> Scan started");
+        outputLog.innerHTML += "> Scan started\n"
+
+        ndef.addEventListener("readingerror", () => {
+          console.log("Argh! Cannot read data from the NFC tag. Try another one?");
+          outputLog.innerHTML += "Argh! Cannot read data from the NFC tag. Try another one?\n"
+        });
+
+        ndef.addEventListener("reading", ({ message, serialNumber }) => {
+          console.log(`---------------`);
+          outputLog.innerHTML += `---------------\n`
+          console.log(`> Serial Number: ${serialNumber}`);
+          outputLog.innerHTML += `> Serial Number: ${serialNumber}\n`
+
+          //console.log(`> Records: (${message.records.length})`);
+          //outputLog.innerHTML += `> Records: (${message.records.length})\n`
+
+          console.log(`> Records: (${getKeys(message.records[0])})`);
+
+          console.log(`> Record Type: (${message.records[0].recordType})`);
+          outputLog.innerHTML += `> Record Type: (${message.records[0].recordType})\n`
+          console.log(`> Media Type: (${message.records[0].mediaType})`);
+          outputLog.innerHTML += `> Media Type: (${message.records[0].mediaType})\n`
+          console.log(`> Record ID: (${message.records[0].id})`);
+          outputLog.innerHTML += `> Record ID: (${message.records[0].id})\n`
+          console.log(`> Record Encoding: (${message.records[0].encoding})`);
+          outputLog.innerHTML += `> Record Encoding: (${message.records[0].encoding})\n`
+          console.log(`> Record Lang: (${message.records[0].lang})`);
+          outputLog.innerHTML += `> Record Lang: (${message.records[0].lang})\n`
+          
+          const decoder = new TextDecoder();
+          const dataStr = decoder.decode(message.records[0].data);
+          
+          console.log(`> Record Data: (${dataStr})`);
+          outputLog.innerHTML += `> Record Data: (${dataStr})\n`
+
+          //console.log(`> Record ID: (${message.records[0].id})`);
+          //outputLog.innerHTML += `> Record ID: (${message.records[0].id})\n`
+        });
+      } catch (error) {
+        isStarted = false
+        scanButton.style.backgroundColor = "#0F9E47"
+        scanButton.innerHTML = "SCAN"
+        console.log("Argh! " + error);
+        outputLog.innerHTML += "Argh! " + error + "\n"
+      }
+    });
+
+    var getKeys = function(obj) {
+      var keys = [];
+      for (var key in obj) {
+        keys.push(key + ":" + obj[key]);
+      }
+      return keys;
+    }
+    
+    function stopScanning() {
+      if(isStarted) {
+        abortController.abort();
+        isStarted = false
+        scanButton.style.backgroundColor = "#0F9E47"
+        scanButton.innerHTML = "SCAN"
+      }
+    }
+  </script>
+</body>
+
+</html>
